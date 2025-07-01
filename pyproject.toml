@@ -1,5 +1,5 @@
 [project]
-name = "còdigo"
+name = "codigo"
 version = "0.0.1"
 description = "Primer proyecto diplomado"
 authors = [
@@ -13,10 +13,20 @@ dependencies = [
     "numpy (>=2.3.0,<3.0.0)",
     "seaborn (>=0.13.2,<0.14.0)",
     "streamlit (>=1.46.1,<2.0.0)",
-    "plotly (>=6.2.0,<7.0.0)"
+    "plotly (>=6.2.0,<7.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)",
+    "scikit-learn (>=1.7.0,<2.0.0)",
+    "matplotlib (>=3.10.3,<4.0.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "codigo"
+version = "0.0.1"
+description = ""
+authors = ["Tu Nombre <tucorreo@example.com>"]
+package-mode = false
