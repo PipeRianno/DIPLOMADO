@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import io
-import numpy as np  # necesario para np.where
 
 # Colores oficiales Universidad Santo Tomás
 UST_BLUE = "#002855"
@@ -136,21 +135,6 @@ def show_transform_tab():
         'poblaci_n_5_16', 'tasa_matriculaci_n_5_16',
         'cobertura_neta', 'cobertura_bruta']]
 
-    # 👉 Formatear porcentajes para visualización (Bogotá sin cambio)
-    df_fact = df_fact.merge(dim_geo[['id_geo', 'municipio']], on='id_geo', how='left')
-
-    df_fact['tasa_matriculaci_n_5_16_porcentaje'] = np.where(
-        df_fact['municipio'] == 'BOGOTÁ D.C.',
-        df_fact['tasa_matriculaci_n_5_16'].round(1),
-        df_fact['tasa_matriculaci_n_5_16'].round(1).astype(str) + '%'
-    )
-
-    df_fact['cobertura_neta_porcentaje'] = np.where(
-        df_fact['municipio'] == 'BOGOTÁ D.C.',
-        df_fact['cobertura_neta'].round(1),
-        df_fact['cobertura_neta'].round(1).astype(str) + '%'
-    )
-
     st.success(f"✅ Tabla de hechos construida con {len(df_fact):,} registros.")
     st.session_state['df_fact'] = df_fact
     st.session_state['dim_geo'] = dim_geo
@@ -197,6 +181,6 @@ def show_transform_tab():
     st.subheader("📈 Resumen por Departamento y Año")
 
     df_fact_ext = df_fact.merge(dim_geo, on='id_geo').merge(dim_tiempo, on='id_tiempo')
-    resumen = df_fact_ext.groupby(['departamento', 'a_o'])[ 
+    resumen = df_fact_ext.groupby(['departamento', 'a_o'])[
         ['tasa_matriculaci_n_5_16', 'cobertura_neta', 'cobertura_bruta']].mean().reset_index()
     st.dataframe(resumen.head(20))
