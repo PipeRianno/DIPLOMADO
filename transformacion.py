@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import unidecode
 import io
 
 # Colores oficiales Universidad Santo Tomás
@@ -44,6 +45,36 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# =========================
+# 🔧 Funciones de Limpieza
+# =========================
+def normalizar_texto(texto: str) -> str:
+    """Minúsculas, sin tildes, sin puntos/comas."""
+    if pd.isna(texto):
+        return texto
+    txt = unidecode.unidecode(texto.strip().lower())
+    txt = txt.replace(".", "").replace(",", "")
+    return txt
+
+def corregir_departamentos(df: pd.DataFrame) -> pd.DataFrame:
+    """Unifica nombres de departamentos problemáticos."""
+    df["departamento"] = df["departamento"].astype(str)
+    df["departamento"] = df["departamento"].str.replace(r"bogota.*", "bogota", regex=True)
+    df["departamento"] = df["departamento"].str.replace(r"san andres.*", "san andres", regex=True)
+    df["departamento"] = df["departamento"].str.replace(r"valle del cauca", "valle", regex=True)
+    return df
+
+def limpiar_metricas(df: pd.DataFrame) -> pd.DataFrame:
+    """Convierte a numérico y elimina negativos (pero mantiene >100)."""
+    for col in ["tasa_matriculaci_n_5_16", "cobertura_neta", "cobertura_bruta"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df.loc[df[col] < 0, col] = None
+    return df
+
+# =========================
+# 🖥️ Dashboard Principal
+# =========================
 def show_transform_tab():
     st.title("📊 Dashboard Educativo: Modelo Estrella")
 
@@ -53,22 +84,21 @@ def show_transform_tab():
 
     df = st.session_state['df_raw'].copy()
 
+    # --- Limpieza inicial de NACIONAL ---
     tabla_deptos = (
-        df
-        .query("departamento != 'NACIONAL'")
-        [['c_digo_departamento','departamento']]
-        .drop_duplicates()
-        .groupby('c_digo_departamento')
-        .sample(n=1, random_state=1)
-        .reset_index()
-        .drop(columns= 'index')
+        df.query("departamento != 'NACIONAL'")
+          [['c_digo_departamento', 'departamento']]
+          .drop_duplicates()
+          .groupby('c_digo_departamento')
+          .sample(n=1, random_state=1)
+          .reset_index()
+          .drop(columns='index')
     )
 
     df = (
-        df
-        .query("departamento != 'NACIONAL'")
-        .drop(columns = 'departamento')
-        .merge(tabla_deptos, on = 'c_digo_departamento', how = 'left')
+        df.query("departamento != 'NACIONAL'")
+          .drop(columns='departamento')
+          .merge(tabla_deptos, on='c_digo_departamento', how='left')
     )
 
     st.markdown("""
@@ -80,28 +110,41 @@ def show_transform_tab():
     5. **Descarga y resumen detallado**
     """)
 
+    # =========================
+    # 1️⃣ Limpieza y Validación
+    # =========================
     st.markdown("---")
     st.subheader("1️⃣ Limpieza y Validación de Datos")
+
     columnas_relevantes = [
         'a_o', 'departamento', 'municipio', 'c_digo_departamento',
         'poblaci_n_5_16', 'tasa_matriculaci_n_5_16',
         'cobertura_neta', 'cobertura_bruta'
     ]
-    columnas_faltantes = [col for col in columnas_relevantes if col not in df.columns] # list comprehension
+    columnas_faltantes = [col for col in columnas_relevantes if col not in df.columns]
     if columnas_faltantes:
         st.error(f"❌ Columnas faltantes: {columnas_faltantes}")
         return
+
     df = df[columnas_relevantes]
-    df.columns = [c.lower() for c in df.columns]
-    for col in df.columns:
-        if col not in ['departamento', 'municipio', 'c_digo_departamento']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # --- Normalización de texto ---
+    for col in ["departamento", "municipio"]:
+        df[col] = df[col].astype(str).apply(normalizar_texto)
+
+    df = corregir_departamentos(df)
+    df = limpiar_metricas(df)
+    df = df.drop_duplicates()
     df_clean = df.dropna()
 
     col1, col2 = st.columns(2)
     col1.metric("Registros originales", len(st.session_state['df_raw']))
     col2.metric("Registros válidos", len(df_clean))
+    st.session_state['df_clean'] = df_clean
 
+    # =========================
+    # 2️⃣ Dimensiones
+    # =========================
     st.markdown("---")
     st.subheader("2️⃣ Dimensiones del Modelo Estrella")
 
@@ -113,33 +156,37 @@ def show_transform_tab():
         dim[f"id_{nombre}"] = dim.index + 1
         return dim[[f"id_{nombre}"] + cols]
 
-    dim_tiempo = crear_dimension(df_clean, ['a_o'], 'tiempo')
-    dim_geo = df_clean[['c_digo_departamento', 'departamento', 'municipio']].copy()
-    dim_geo = dim_geo.sort_values(by=['c_digo_departamento', 'municipio'])
-    dim_geo = dim_geo.drop_duplicates(subset=['c_digo_departamento'], keep='first').reset_index(drop=True)
-    dim_geo['id_geo'] = dim_geo.index + 1
-    dim_geo = dim_geo[['id_geo', 'c_digo_departamento', 'departamento', 'municipio']]
+    dim_tiempo = crear_dimension(df_clean, ['a_o'], 'tiempo', sort_col='a_o')
+    dim_geo = crear_dimension(df_clean, ['c_digo_departamento', 'departamento', 'municipio'],
+                              'geo', sort_col='c_digo_departamento')
 
     col3, col4 = st.columns(2)
     col3.metric("Dimensión Tiempo", len(dim_tiempo))
     col4.metric("Dimensión Geográfica", len(dim_geo))
 
+    st.session_state['dim_geo'] = dim_geo
+    st.session_state['dim_tiempo'] = dim_tiempo
+
+    # =========================
+    # 3️⃣ Tabla de Hechos
+    # =========================
     st.markdown("---")
     st.subheader("3️⃣ Tabla de Hechos")
 
     df_fact = df_clean.merge(dim_tiempo, on='a_o') \
                       .merge(dim_geo, on=['departamento', 'municipio', 'c_digo_departamento'], how='inner')
-
     df_fact = df_fact[[
         'id_tiempo', 'id_geo',
         'poblaci_n_5_16', 'tasa_matriculaci_n_5_16',
-        'cobertura_neta', 'cobertura_bruta']]
+        'cobertura_neta', 'cobertura_bruta'
+    ]]
 
     st.success(f"✅ Tabla de hechos construida con {len(df_fact):,} registros.")
     st.session_state['df_fact'] = df_fact
-    st.session_state['dim_geo'] = dim_geo
-    st.session_state['dim_tiempo'] = dim_tiempo
 
+    # =========================
+    # 4️⃣ Indicadores y Visualizaciones
+    # =========================
     st.markdown("---")
     st.subheader("4️⃣ Indicadores y Visualizaciones")
 
@@ -162,6 +209,9 @@ def show_transform_tab():
     st.markdown("**🏛️ Top Departamentos por Cobertura Neta Promedio**")
     st.dataframe(cobertura_depto.reset_index())
 
+    # =========================
+    # 5️⃣ Descarga y Resumen
+    # =========================
     st.markdown("---")
     st.subheader("5️⃣ Vista y Descarga de la Tabla de Hechos")
 
@@ -175,7 +225,8 @@ def show_transform_tab():
         label="📥 Descargar Tabla de Hechos",
         data=output,
         file_name='tabla_hechos_educacion.xlsx',
-        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
     st.markdown("---")
     st.subheader("📈 Resumen por Departamento y Año")
