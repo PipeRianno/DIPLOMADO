@@ -22,6 +22,17 @@ Este proyecto forma parte del **Diplomado en Gestión de Datos** y está enfocad
 - **Streamlit** (dashboards interactivos)
 - **Git & GitHub** (control de versiones)
 
+
+## 🌐 Visualiza el Dashboard
+
+Haz clic en el siguiente enlace para interactuar con el dashboard en tiempo real:
+
+👉 [**Abrir Dashboard en Streamlit**](https://diplomado-e8ymdvdactosvybogts8ec.streamlit.app)
+
+[![Ver en Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://diplomado-e8ymdvdactosvybogts8ec.streamlit.app)
+
+
+
 ## 🚀 **Ejecución**
 1. Clona este repositorio:
    ```bash
