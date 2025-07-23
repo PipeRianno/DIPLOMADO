@@ -7,6 +7,7 @@ import unidecode
 # ==========================
 # 🎨 PALETA DE COLORES
 # ==========================
+
 UST_BLUE = "#002855"
 UST_YELLOW = "#FFD100"
 UST_GRAY = "#F5F5F5"
