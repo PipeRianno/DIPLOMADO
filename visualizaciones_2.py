@@ -163,24 +163,24 @@ def show_visualizaciones_tab():
     # ==========================
     # 6️⃣ MAPA INTERACTIVO
     # ==========================
-    st.subheader(f"🗺️ Cobertura Neta por Departamento ({anio_sel if anio_sel != 'Todos' else 'Último año'})")
-    ultimo_anio = anio_sel if anio_sel != "Todos" else df_union["anio"].max()
-    mapa_data = df_union[df_union["anio"] == ultimo_anio].groupby(
-        "nombre_departamento"
-    )[["cobertura_neta_total"]].mean().reset_index()
+    #st.subheader(f"🗺️ Cobertura Neta por Departamento ({anio_sel if anio_sel != 'Todos' else 'Último año'})")
+    #ultimo_anio = anio_sel if anio_sel != "Todos" else df_union["anio"].max()
+    #mapa_data = df_union[df_union["anio"] == ultimo_anio].groupby(
+    #    "nombre_departamento"
+    #)[["cobertura_neta_total"]].mean().reset_index()
 
-    fig_mapa = px.choropleth(
-        mapa_data,
-        locations="nombre_departamento",
-        locationmode="geojson-id",
-        geojson="https://raw.githubusercontent.com/marcovega/colombia-json/master/colombia.json",
-        color="cobertura_neta_total",
-        hover_name="nombre_departamento",
-        color_continuous_scale="Blues",
-        title=f"Cobertura Neta Total por Departamento ({ultimo_anio})"
-    )
-    fig_mapa.update_geos(fitbounds="locations", visible=False)
-    st.plotly_chart(fig_mapa, use_container_width=True)
+    #fig_mapa = px.choropleth(
+    #    mapa_data,
+    #    locations="nombre_departamento",
+    #    locationmode="geojson-id",
+    #    geojson="https://raw.githubusercontent.com/marcovega/colombia-json/master/colombia.json",
+    #    color="cobertura_neta_total",
+    #    hover_name="nombre_departamento",
+    #    color_continuous_scale="Blues",
+    #    title=f"Cobertura Neta Total por Departamento ({ultimo_anio})"
+    #)
+    #fig_mapa.update_geos(fitbounds="locations", visible=False)
+    #st.plotly_chart(fig_mapa, use_container_width=True)
 
     # ==========================
     # 7️⃣ RELACIÓN COBERTURA VS POBLACIÓN
